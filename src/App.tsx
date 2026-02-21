@@ -51,86 +51,187 @@ function useClock() {
 }
 
 // ── SIDEBAR ────────────────────────────────────────────────────────────
+const NAV_SECTIONS = [
+  { section: "Main", items: NAV.slice(0, 3) },
+  { section: "Finance", items: NAV.slice(3, 5) },
+  { section: "System", items: NAV.slice(5) },
+];
+
 function Sidebar({
   view,
   setView,
+  collapsed,
+  setCollapsed,
+  mobileOpen,
+  setMobileOpen,
 }: {
   view: View;
   setView: (v: View) => void;
+  collapsed: boolean;
+  setCollapsed: (v: boolean) => void;
+  mobileOpen: boolean;
+  setMobileOpen: (v: boolean) => void;
 }) {
-  return (
-    <aside className="w-[240px] min-w-[240px] flex flex-col border-r border-border bg-sidebar sticky top-0 h-screen overflow-hidden">
+  const navigate = (v: View) => {
+    setView(v);
+    setMobileOpen(false);
+  };
+
+  const sidebarContent = (
+    <aside
+      className="flex flex-col h-full border-r border-border bg-sidebar overflow-hidden"
+      style={{
+        width: collapsed ? 64 : 240,
+        transition: "width 0.25s cubic-bezier(.4,0,.2,1)",
+        minWidth: collapsed ? 64 : 240,
+      }}
+    >
       {/* Brand */}
-      <div className="px-5 pt-5 pb-4 border-b border-sidebar-border">
-        <div className="flex items-center gap-2.5">
-          <div
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-lg font-bold text-primary-foreground"
-            style={{
-              background:
-                "linear-gradient(135deg, var(--chart-1), var(--chart-2))",
-            }}
-          >
-            ◎
-          </div>
-          <div>
-            <div className="text-sm font-extrabold text-sidebar-foreground leading-tight tracking-tight">
+      <div
+        className="flex items-center border-b border-sidebar-border flex-shrink-0"
+        style={{
+          padding: collapsed ? "16px 0" : "16px 20px",
+          justifyContent: collapsed ? "center" : "flex-start",
+          gap: 10,
+          transition: "padding 0.2s",
+        }}
+      >
+        <div
+          className="w-8 h-8 rounded-lg flex items-center justify-center text-lg font-bold text-primary-foreground flex-shrink-0"
+          style={{
+            background:
+              "linear-gradient(135deg, var(--chart-1), var(--chart-2))",
+          }}
+        >
+          ◎
+        </div>
+        {!collapsed && (
+          <div className="overflow-hidden">
+            <div className="text-sm font-extrabold text-sidebar-foreground leading-tight tracking-tight whitespace-nowrap">
               Agentic Wallet
             </div>
-            <div className="text-[10px] text-muted-foreground font-mono">
+            <div className="text-[10px] text-muted-foreground font-mono whitespace-nowrap">
               Solana Devnet
             </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 p-3 flex flex-col gap-0.5 overflow-y-auto">
-        {[
-          { section: "Main", items: NAV.slice(0, 3) },
-          { section: "Finance", items: NAV.slice(3, 5) },
-          { section: "System", items: NAV.slice(5) },
-        ].map(({ section, items }) => (
+      <nav
+        className="flex-1 overflow-y-auto"
+        style={{
+          padding: collapsed ? "8px 6px" : "8px 10px",
+          transition: "padding 0.2s",
+        }}
+      >
+        {NAV_SECTIONS.map(({ section, items }) => (
           <div key={section} className="mb-1">
-            <div className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground px-3 pt-3 pb-1.5">
-              {section}
-            </div>
-            {items.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => setView(item.id)}
-                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition-all border border-transparent cursor-pointer font-[inherit] text-left"
-                style={{
-                  color:
-                    view === item.id
+            {!collapsed && (
+              <div className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground px-3 pt-3 pb-1.5">
+                {section}
+              </div>
+            )}
+            {collapsed && <div className="h-3" />}
+            {items.map((item) => {
+              const active = view === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => navigate(item.id)}
+                  title={collapsed ? item.label : undefined}
+                  className="w-full flex items-center rounded-md text-sm font-medium transition-all border border-transparent cursor-pointer font-[inherit] mb-0.5"
+                  style={{
+                    justifyContent: collapsed ? "center" : "flex-start",
+                    gap: collapsed ? 0 : 10,
+                    padding: collapsed ? "8px 0" : "8px 12px",
+                    color: active
                       ? "var(--sidebar-primary)"
                       : "var(--muted-foreground)",
-                  background:
-                    view === item.id
+                    background: active
                       ? "color-mix(in oklch, var(--sidebar-primary) 10%, transparent)"
                       : "transparent",
-                  borderColor:
-                    view === item.id
+                    borderColor: active
                       ? "color-mix(in oklch, var(--sidebar-primary) 25%, transparent)"
                       : "transparent",
-                }}
-              >
-                <span className="text-base leading-none w-5 text-center flex-shrink-0">
-                  {item.icon}
-                </span>
-                {item.label}
-              </button>
-            ))}
+                  }}
+                >
+                  <span className="text-base leading-none w-5 text-center flex-shrink-0">
+                    {item.icon}
+                  </span>
+                  {!collapsed && (
+                    <span className="whitespace-nowrap">{item.label}</span>
+                  )}
+                </button>
+              );
+            })}
           </div>
         ))}
       </nav>
 
-      {/* Footer */}
-      <div className="px-4 py-3 border-t border-sidebar-border">
-        <div className="text-[10px] font-mono text-muted-foreground">
-          v1.0.0 · Solana Agentic Wallet
-        </div>
+      {/* Footer / Collapse Toggle */}
+      <div
+        className="border-t border-sidebar-border flex-shrink-0"
+        style={{ padding: collapsed ? "10px 6px" : "10px 14px" }}
+      >
+        {!collapsed && (
+          <div className="text-[10px] font-mono text-muted-foreground mb-2 whitespace-nowrap">
+            v1.0.0 · Solana Agentic Wallet
+          </div>
+        )}
+        <button
+          onClick={() => setCollapsed(!collapsed)}
+          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          className="w-full flex items-center justify-center py-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-all cursor-pointer bg-transparent border border-transparent hover:border-border font-[inherit] text-sm"
+        >
+          {collapsed ? "▶" : "◀ Collapse"}
+        </button>
       </div>
     </aside>
+  );
+
+  return (
+    <>
+      {/* Desktop sidebar */}
+      <div
+        className="hidden md:flex h-full flex-shrink-0"
+        style={{
+          width: collapsed ? 64 : 240,
+          transition: "width 0.25s cubic-bezier(.4,0,.2,1)",
+        }}
+      >
+        {sidebarContent}
+      </div>
+
+      {/* Mobile drawer backdrop */}
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/60 md:hidden"
+          style={{ backdropFilter: "blur(3px)" }}
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+
+      {/* Mobile drawer */}
+      <div
+        className="fixed inset-y-0 left-0 z-50 md:hidden flex"
+        style={{
+          transform: mobileOpen ? "translateX(0)" : "translateX(-100%)",
+          transition: "transform 0.3s cubic-bezier(.4,0,.2,1)",
+        }}
+      >
+        <div style={{ width: 240 }}>{sidebarContent}</div>
+        {/* Close button */}
+        {mobileOpen && (
+          <button
+            onClick={() => setMobileOpen(false)}
+            className="absolute top-4 right-[-48px] w-10 h-10 flex items-center justify-center rounded-full bg-card border border-border text-foreground cursor-pointer font-[inherit] text-lg"
+          >
+            ✕
+          </button>
+        )}
+      </div>
+    </>
   );
 }
 
@@ -138,26 +239,41 @@ function Sidebar({
 function Navbar({
   agentCount,
   runningCount,
+  onMenuClick,
 }: {
   agentCount: number;
   runningCount: number;
+  onMenuClick: () => void;
 }) {
   const clock = useClock();
   return (
-    <header className="h-14 flex items-center justify-between px-6 border-b border-border bg-background/80 backdrop-blur-lg sticky top-0 z-50">
-      <div className="text-base font-extrabold tracking-tight text-foreground">
-        Solana <span style={{ color: "var(--primary)" }}>Agentic</span> Wallet
-      </div>
+    <header className="h-14 flex items-center justify-between px-4 md:px-6 border-b border-border bg-background/80 backdrop-blur-lg sticky top-0 z-50 flex-shrink-0">
       <div className="flex items-center gap-3">
+        {/* Hamburger — mobile only */}
+        <button
+          onClick={onMenuClick}
+          className="md:hidden flex flex-col gap-1.5 p-2 rounded-md hover:bg-muted/40 transition-colors cursor-pointer bg-transparent border-none"
+          aria-label="Open menu"
+        >
+          <span className="block w-5 h-0.5 bg-foreground rounded" />
+          <span className="block w-5 h-0.5 bg-foreground rounded" />
+          <span className="block w-3 h-0.5 bg-foreground rounded" />
+        </button>
+        <div className="text-sm md:text-base font-extrabold tracking-tight text-foreground">
+          Solana <span style={{ color: "var(--primary)" }}>Agentic</span>{" "}
+          <span className="hidden sm:inline">Wallet</span>
+        </div>
+      </div>
+      <div className="flex items-center gap-2 md:gap-3">
         <span
-          className="text-xs font-semibold px-2.5 py-1 rounded-full border"
+          className="hidden sm:inline text-xs font-semibold px-2.5 py-1 rounded-full border"
           style={{
             color: "var(--chart-2)",
             borderColor: "color-mix(in oklch, var(--chart-2) 30%, transparent)",
             background: "color-mix(in oklch, var(--chart-2) 8%, transparent)",
           }}
         >
-          🤖 {agentCount} Agents
+          🤖 {agentCount}
         </span>
         <span
           className="text-xs font-semibold px-2.5 py-1 rounded-full border"
@@ -167,10 +283,10 @@ function Navbar({
             background: "color-mix(in oklch, var(--chart-1) 8%, transparent)",
           }}
         >
-          ▶ {runningCount} Active
+          ▶ {runningCount}
         </span>
         <NetworkBadge />
-        <code className="text-xs text-muted-foreground font-mono tabular-nums">
+        <code className="hidden lg:block text-xs text-muted-foreground font-mono tabular-nums">
           {clock}
         </code>
       </div>
@@ -190,7 +306,7 @@ function SimBanner({
 }) {
   return (
     <div
-      className="flex items-center justify-between px-4 py-2.5 rounded-xl border text-sm transition-all"
+      className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-0 justify-between px-4 py-3 rounded-xl border text-sm transition-all"
       style={{
         borderColor: running
           ? "color-mix(in oklch, var(--chart-1) 25%, transparent)"
@@ -201,26 +317,27 @@ function SimBanner({
       }}
     >
       <div
-        className="flex items-center gap-2.5 font-medium"
+        className="flex items-center gap-2.5 font-medium min-w-0"
         style={{
           color: running ? "var(--chart-1)" : "var(--muted-foreground)",
         }}
       >
         {running && (
           <span
-            className="rounded-full animate-pulse-dot"
+            className="rounded-full animate-pulse-dot flex-shrink-0"
             style={{
               width: 7,
               height: 7,
               display: "inline-block",
               background: "var(--chart-1)",
-              flexShrink: 0,
             }}
           />
         )}
-        {running
-          ? "Simulation running — agents executing autonomous transactions in real-time"
-          : "Simulation paused"}
+        <span className="truncate">
+          {running
+            ? "Simulation running — agents executing autonomous transactions in real-time"
+            : "Simulation paused"}
+        </span>
       </div>
       <div className="flex items-center gap-2 flex-shrink-0">
         <button
@@ -285,7 +402,7 @@ function DashboardView({
   return (
     <div className="flex flex-col gap-5">
       {/* Stats */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         <StatCard
           icon="🤖"
           label="Total Agents"
@@ -317,7 +434,10 @@ function DashboardView({
       </div>
 
       {/* Middle row */}
-      <div className="grid gap-4" style={{ gridTemplateColumns: "280px 1fr" }}>
+      <div
+        className="grid gap-4"
+        style={{ gridTemplateColumns: "var(--topology-cols, 1fr)" }}
+      >
         {/* Topology */}
         <Card title="Network Map" titleRight={<NetworkBadge />}>
           <div className="p-4">
@@ -365,7 +485,7 @@ function DashboardView({
 
       {/* Agents grid */}
       <SectionHeader title="Active Agents" icon="🤖" />
-      <div className="grid grid-cols-2 gap-4 -mt-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 -mt-4">
         {agents.map((agent) => (
           <AgentCard
             key={agent.id}
@@ -490,7 +610,7 @@ function AgentsView({
                   </div>
                 </div>
                 {/* Stats */}
-                <div className="grid grid-cols-5 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 md:gap-3">
                   {[
                     {
                       label: "SOL Balance",
@@ -827,7 +947,7 @@ function CreateTokenModal({
       ) : (
         // ── Form
         <div className="px-6 py-5 flex flex-col gap-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className={labelCls}>Symbol *</label>
               <input
@@ -848,7 +968,7 @@ function CreateTokenModal({
               />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className={labelCls}>Initial Supply *</label>
               <input
@@ -1189,7 +1309,7 @@ function TransferModal({
         </div>
       ) : (
         <div className="px-6 py-5 flex flex-col gap-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className={labelCls}>From Agent</label>
               <select
@@ -1479,7 +1599,7 @@ function TokensView({
       </Card>
 
       <SectionHeader title="Agent Token Holdings" icon="💼" />
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {agents.map((agent) => {
           const color =
             {
@@ -1488,10 +1608,7 @@ function TokensView({
               "Token Manager": "var(--chart-2)",
               Idle: "var(--chart-4)",
             }[agent.behavior] ?? "var(--primary)";
-          const totalTokens = tokens.reduce(
-            (s, tk) => s + (tk.holdings[agent.id] ?? 0),
-            0,
-          );
+
           return (
             <Card key={agent.id}>
               <div className="p-4">
@@ -1650,7 +1767,7 @@ function SettingsView() {
         icon="⚙"
         action={<PrimaryBtn>Save Config</PrimaryBtn>}
       />
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {groups.slice(0, 2).map((g) => (
           <Card key={g.title} title={g.title}>
             <div className="p-4 flex flex-col gap-4">
@@ -1664,7 +1781,7 @@ function SettingsView() {
           </Card>
         ))}
         <Card title={groups[2].title} className="col-span-2">
-          <div className="p-4 grid grid-cols-2 gap-4">
+          <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
             {groups[2].fields.map((f) => (
               <div key={f.label}>
                 <label className={labelCls}>{f.label}</label>
@@ -1783,6 +1900,9 @@ export default function App() {
     [agents, tokens],
   );
 
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarMobileOpen, setSidebarMobileOpen] = useState(false);
+
   const runningCount = agents.filter((a) => a.status === "running").length;
 
   // Live simulation tick
@@ -1814,12 +1934,22 @@ export default function App() {
   );
 
   return (
-    /* Apply dark class at root so the design token system activates dark mode */
     <div className="dark min-h-screen flex flex-col bg-background text-foreground">
-      <Navbar agentCount={agents.length} runningCount={runningCount} />
-      <div className="flex flex-1 overflow-hidden">
-        <Sidebar view={view} setView={setView} />
-        <main className="flex-1 overflow-y-auto p-6 flex flex-col gap-4">
+      <Navbar
+        agentCount={agents.length}
+        runningCount={runningCount}
+        onMenuClick={() => setSidebarMobileOpen(true)}
+      />
+      <div className="flex flex-1 overflow-hidden relative">
+        <Sidebar
+          view={view}
+          setView={setView}
+          collapsed={sidebarCollapsed}
+          setCollapsed={setSidebarCollapsed}
+          mobileOpen={sidebarMobileOpen}
+          setMobileOpen={setSidebarMobileOpen}
+        />
+        <main className="flex-1 overflow-y-auto p-3 md:p-6 flex flex-col gap-3 md:gap-4 min-w-0">
           <SimBanner
             running={simRunning}
             onToggle={() => setSimRunning((p) => !p)}

@@ -245,3 +245,29 @@
 .tab-item  { @apply px-3 py-1.5 rounded-md text-xs font-semibold text-muted-foreground transition-all cursor-pointer border-none bg-transparent font-[inherit]; }
 .tab-item:hover { @apply text-foreground; }
 .tab-item.active { @apply bg-card text-foreground shadow-sm; }
+
+/* ── RESPONSIVE LAYOUT ─────────────────────────────────────────────── */
+
+/* Desktop topology: sidebar card + live tx side by side */
+@media (min-width: 768px) {
+  :root { --topology-cols: 280px 1fr; }
+}
+/* Mobile topology: stacked */
+@media (max-width: 767px) {
+  :root { --topology-cols: 1fr; }
+}
+
+/* Modals full-width on narrow screens */
+@media (max-width: 540px) {
+  .modal-panel {
+    max-width: calc(100vw - 24px) !important;
+    border-radius: 16px !important;
+  }
+}
+
+/* Tables: allow horizontal scroll on mobile */
+.overflow-x-auto { -webkit-overflow-scrolling: touch; }
+
+/* Sidebar fills viewport height under the navbar */
+aside { height: 100%; }
+
