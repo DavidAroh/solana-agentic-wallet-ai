@@ -1,76 +1,84 @@
 import React from "react";
 import { Agent } from "../simulation";
 
+// ── SPARKLINE ────────────────────────────────────────────────────────
 interface SparklineProps {
   data: number[];
-  color?: string;
+  colorVar?: string; // CSS color string
   height?: number;
 }
 
 export function Sparkline({
   data,
-  color = "#8b5cf6",
-  height = 60,
+  colorVar = "var(--chart-1)",
+  height = 56,
 }: SparklineProps) {
   if (!data || data.length < 2) return null;
 
-  const width = 200;
+  const W = 260;
+  const H = height;
+  const pad = 4;
   const minVal = Math.min(...data);
   const maxVal = Math.max(...data);
-  const range = maxVal - minVal || 1;
-  const padding = 4;
+  const range = maxVal - minVal || 0.0001;
 
-  const points = data.map((val, i) => {
-    const x = (i / (data.length - 1)) * (width - padding * 2) + padding;
-    const y =
-      height - ((val - minVal) / range) * (height - padding * 2) - padding;
-    return `${x},${y}`;
-  });
+  const pts = data.map((v, i) => ({
+    x: pad + (i / (data.length - 1)) * (W - pad * 2),
+    y: H - pad - ((v - minVal) / range) * (H - pad * 2),
+  }));
 
-  const pathD = "M " + points.join(" L ");
-  const areaD = `${pathD} L ${padding + ((data.length - 1) / (data.length - 1)) * (width - padding * 2)},${height} L ${padding},${height} Z`;
+  const linePath =
+    "M " + pts.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" L ");
+  const areaPath =
+    linePath +
+    ` L ${pts[pts.length - 1].x.toFixed(1)},${H} L ${pts[0].x.toFixed(1)},${H} Z`;
+
+  const gradId = `sg-${Math.random().toString(36).slice(2, 7)}`;
 
   return (
     <svg
-      viewBox={`0 0 ${width} ${height}`}
+      viewBox={`0 0 ${W} ${H}`}
       preserveAspectRatio="none"
-      style={{ width: "100%", height: height }}
-      className="chart-svg"
+      className="sparkline-svg"
+      style={{ height }}
     >
       <defs>
-        <linearGradient
-          id={`grad-${color.replace("#", "")}`}
-          x1="0"
-          y1="0"
-          x2="0"
-          y2="1"
-        >
-          <stop offset="0%" stopColor={color} stopOpacity="0.25" />
-          <stop offset="100%" stopColor={color} stopOpacity="0" />
+        <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={colorVar} stopOpacity="0.30" />
+          <stop offset="100%" stopColor={colorVar} stopOpacity="0.02" />
         </linearGradient>
-        <filter id="glow">
-          <feGaussianBlur stdDeviation="2" result="blur" />
-          <feComposite in="SourceGraphic" in2="blur" operator="over" />
-        </filter>
       </defs>
-      <path d={areaD} fill={`url(#grad-${color.replace("#", "")})`} />
+      {/* Area fill */}
+      <path d={areaPath} fill={`url(#${gradId})`} />
+      {/* Line */}
       <path
-        d={pathD}
-        stroke={color}
-        strokeWidth="2"
+        d={linePath}
+        stroke={colorVar}
+        strokeWidth="1.8"
         fill="none"
-        filter="url(#glow)"
+        strokeLinejoin="round"
+        strokeLinecap="round"
       />
+      {/* End dot */}
       <circle
-        cx={points[points.length - 1].split(",")[0]}
-        cy={points[points.length - 1].split(",")[1]}
+        cx={pts[pts.length - 1].x}
+        cy={pts[pts.length - 1].y}
         r="3"
-        fill={color}
-        filter="url(#glow)"
+        fill={colorVar}
+        stroke="var(--card)"
+        strokeWidth="1.5"
       />
     </svg>
   );
 }
+
+// ── AGENT TOPOLOGY ───────────────────────────────────────────────────
+const ORBIT_POSITIONS = [
+  { angle: 270, r: 78 }, // top
+  { angle: 0, r: 78 }, // right
+  { angle: 90, r: 78 }, // bottom
+  { angle: 180, r: 78 }, // left
+];
 
 interface AgentTopologyProps {
   agents: Agent[];
@@ -83,106 +91,136 @@ export function AgentTopology({
   onSelectAgent,
   selectedAgentId,
 }: AgentTopologyProps) {
-  const positions = [
-    { top: "50%", left: "50%", transform: "translate(-50%,-50%)" }, // center (network)
-    { top: "15%", left: "50%", transform: "translate(-50%,0)" },
-    { top: "50%", left: "82%", transform: "translate(-50%,-50%)" },
-    { top: "80%", left: "68%", transform: "translate(-50%,0)" },
-    { top: "80%", left: "32%", transform: "translate(-50%,0)" },
-    { top: "50%", left: "18%", transform: "translate(-50%,-50%)" },
-  ];
+  const cx = 140;
+  const cy = 110;
+
+  const nodePositions = agents.slice(0, 4).map((_, i) => {
+    const pos = ORBIT_POSITIONS[i % ORBIT_POSITIONS.length];
+    const rad = (pos.angle * Math.PI) / 180;
+    return {
+      x: cx + pos.r * Math.cos(rad),
+      y: cy + pos.r * Math.sin(rad),
+    };
+  });
 
   return (
-    <div className="topology-container">
-      {/* Center node — Solana Network */}
+    <div className="relative w-full" style={{ height: 220 }}>
+      <svg
+        viewBox="0 0 280 220"
+        className="absolute inset-0 w-full h-full pointer-events-none"
+      >
+        {/* Orbit ring */}
+        <circle
+          cx={cx}
+          cy={cy}
+          r={78}
+          fill="none"
+          stroke="var(--border)"
+          strokeWidth="1"
+          strokeDasharray="4 4"
+          opacity="0.5"
+        />
+        {/* Connection lines */}
+        {nodePositions.map((pos, i) => (
+          <line
+            key={i}
+            x1={cx}
+            y1={cy}
+            x2={pos.x}
+            y2={pos.y}
+            stroke="var(--primary)"
+            strokeWidth="1"
+            opacity="0.25"
+          />
+        ))}
+      </svg>
+
+      {/* Center node — Solana */}
       <div
-        className="topology-node topology-center"
-        style={positions[0]}
-        title="Solana Devnet"
+        className="absolute flex items-center justify-center rounded-xl font-bold text-primary-foreground text-xl shadow-lg"
+        style={{
+          left: cx - 26,
+          top: cy - 26,
+          width: 52,
+          height: 52,
+          background: "linear-gradient(135deg, var(--chart-1), var(--chart-2))",
+          boxShadow:
+            "0 0 24px color-mix(in oklch, var(--primary) 50%, transparent)",
+          zIndex: 2,
+        }}
       >
         ◎
       </div>
 
-      {agents.slice(0, 4).map((agent, i) => (
-        <React.Fragment key={agent.id}>
-          {/* Connection line */}
-          <svg
-            style={{
-              position: "absolute",
-              inset: 0,
-              width: "100%",
-              height: "100%",
-              pointerEvents: "none",
-            }}
-            viewBox="0 0 300 220"
-            preserveAspectRatio="none"
-          />
-
-          {/* Agent node */}
-          <div
-            className={`topology-node ${agent.colorClass} ${selectedAgentId === agent.id ? "glow-purple" : ""}`}
-            style={{
-              ...(positions[i + 1] as React.CSSProperties),
-              border:
-                selectedAgentId === agent.id
-                  ? "2px solid #8b5cf6"
-                  : "1px solid rgba(255,255,255,0.08)",
-            }}
+      {/* Agent nodes */}
+      {agents.slice(0, 4).map((agent, i) => {
+        const pos = nodePositions[i];
+        const isSelected = selectedAgentId === agent.id;
+        return (
+          <button
+            key={agent.id}
             onClick={() => onSelectAgent(agent.id)}
-            title={`${agent.name} — ${agent.address.slice(0, 8)}...`}
+            className="absolute flex items-center justify-center rounded-xl text-lg transition-all border cursor-pointer"
+            style={{
+              left: pos.x - 20,
+              top: pos.y - 20,
+              width: 40,
+              height: 40,
+              background: "var(--card)",
+              borderColor: isSelected ? "var(--primary)" : "var(--border)",
+              boxShadow: isSelected
+                ? "0 0 16px color-mix(in oklch, var(--primary) 60%, transparent)"
+                : "0 2px 8px color-mix(in oklch, var(--foreground) 8%, transparent)",
+              zIndex: 2,
+              transform: isSelected ? "scale(1.15)" : "scale(1)",
+            }}
+            title={`${agent.name}\n${agent.address}`}
           >
             {agent.emoji}
             {agent.status === "running" && (
-              <div
+              <span
+                className="absolute -top-0.5 -right-0.5 rounded-full"
                 style={{
-                  position: "absolute",
-                  top: 2,
-                  right: 2,
                   width: 8,
                   height: 8,
-                  borderRadius: "50%",
-                  background: "#34d399",
-                  boxShadow: "0 0 6px #34d399",
+                  background: "var(--chart-1)",
+                  boxShadow: "0 0 6px var(--chart-1)",
                   animation: "pulse-dot 1.5s ease infinite",
                 }}
               />
             )}
+          </button>
+        );
+      })}
+
+      {/* Labels */}
+      {agents.slice(0, 4).map((agent, i) => {
+        const pos = nodePositions[i];
+        const labelOffset = {
+          0: { x: 0, y: -18 },
+          1: { x: 24, y: 0 },
+          2: { x: 0, y: 18 },
+          3: { x: -24, y: 0 },
+        }[i] ?? { x: 0, y: -18 };
+
+        return (
+          <div
+            key={`label-${agent.id}`}
+            className="absolute text-center pointer-events-none"
+            style={{
+              left: pos.x + labelOffset.x - 28,
+              top: pos.y + labelOffset.y + (i === 0 ? -32 : i === 2 ? 22 : 0),
+              width: 56,
+              fontSize: "0.6rem",
+              fontWeight: 600,
+              color: "var(--muted-foreground)",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {agent.name.split(" ")[0]}
           </div>
-        </React.Fragment>
-      ))}
-    </div>
-  );
-}
-
-interface StatMiniProps {
-  label: string;
-  value: string | number;
-  color?: string;
-}
-
-export function StatMini({
-  label,
-  value,
-  color = "var(--text-primary)",
-}: StatMiniProps) {
-  return (
-    <div style={{ textAlign: "center" }}>
-      <div
-        style={{ fontSize: 18, fontWeight: 800, color, letterSpacing: -0.5 }}
-      >
-        {value}
-      </div>
-      <div
-        style={{
-          fontSize: 10,
-          color: "var(--text-muted)",
-          textTransform: "uppercase",
-          letterSpacing: "0.8px",
-          marginTop: 2,
-        }}
-      >
-        {label}
-      </div>
+        );
+      })}
     </div>
   );
 }
